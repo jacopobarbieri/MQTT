@@ -2,6 +2,7 @@ import asyncio
 
 class Broker:
     clients=[]
+    ret_messages={}
     def __init__(self,reader,writer):
         self.reader=reader
         self.writer=writer
@@ -21,6 +22,9 @@ class Broker:
                     self.topic=await self.reader.readuntil(b":")
                     self.message=await self.reader.readline()
                     self.topic=self.topic.decode().strip(":")
+                    if self.topic not in self.__class__.ret_messages:
+                        self.__class__.ret_messages[self.topic] = []
+                    self.__class__.ret_messages[self.topic].append(self.message.decode().strip("\n"))
                     for client in self.__class__.clients:
                         if client.topic == self.topic and client.pos == "sub":
                             client.writer.write(f"{self.message.decode()}".encode())
@@ -28,6 +32,10 @@ class Broker:
                 if self.pos=="sub":
                     self.topic=await self.reader.readline()
                     self.topic=self.topic.decode().strip("\n")
+                    if self.topic in self.__class__.ret_messages:
+                        for message in self.__class__.ret_messages[self.topic]:
+                            self.writer.write(f"{message}\n".encode())
+                            await self.writer.drain()
             except(asyncio.IncompleteReadError, ConnectionResetError):
                 print(f"client @{addr} disconnesso")
                 self.__class__.clients.remove(self)
