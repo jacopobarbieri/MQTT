@@ -19,5 +19,8 @@ async def main():
     reader, writer = await asyncio.open_connection(HOST, 8888)
     await Subscriber(reader, writer, topic).run()
 
-
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    print("Chiusura del subscriber...")
+    
