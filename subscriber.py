@@ -1,12 +1,12 @@
 import asyncio
 class Subscriber:
-    clients={}
     def __init__(self,reader,writer,topic):
         self.reader=reader
         self.writer=writer
         self.topic=topic
     async def run(self):
-        self.writer.write(f"{self.topic}\n".encode())
+        self.writer.write(f"sub:{self.topic}\n".encode())
+        await self.writer.drain()
         while True:
             message=await self.reader.readline()
             if not message:
