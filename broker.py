@@ -12,21 +12,26 @@ class Broker:
         addr=self.writer.get_extra_info("peername")[0]
         print(f"nuovo client connesso con ip @{addr}")
         while True:
-            self.pos=await self.reader.readuntil(":").decode().strip()
+            self.pos=await self.reader.readuntil(b":")
+            self.pos=self.pos.decode().strip()
             if self.pos=="pub":
                 self.message=await self.reader.readline()
-                self.topic=await self.reader.readuntil(":").decode().strip()
+                self.topic=await self.reader.readuntil(b":")
+                self.topic=self.topic.decode().strip()
                 for client in self.__class__.clients:
                     if self.__class__.clients[client][2] == self.topic and self.__class__.clients[client][3] == "sub":
-                        self.write(self.message)
-                self.writer.write
+                        self.writer.write(self.message)
+                        await self.writer.drain()
             if self.pos=="sub":
                 self.topic=await self.reader.readline().decode().strip()
 
             self.__class__.clients[self.topic]=[self.reader,self.writer,self.topic,self.pos]
+async def handle(reader, writer):
+    broker = Broker(reader, writer)
+    await broker.run()
 async def main():
     # start_server apre la porta e chiama Broker per ogni nuovo client
-    server = await asyncio.start_server(Broker.run, "", 8888)
+    server = await asyncio.start_server(handle, "", 8888)
     print("Server in ascolto sulla porta 8888")
     async with server:
         await server.serve_forever()
